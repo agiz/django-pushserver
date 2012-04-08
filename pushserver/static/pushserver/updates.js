@@ -32,29 +32,33 @@ function listenForUpdates() {
 			}
 		}
 
-		jQuery.ajax({
-			'beforeSend': function (jqXHR) {
-				jqXHR.setRequestHeader("If-None-Match", etag);
-				jqXHR.setRequestHeader("If-Modified-Since", last_modified);
-			},
-			'url': updates_url,
-			'dataType': 'json',
-			'type': 'GET',
-			'timeout': 0,
-			'success': function (data, textStatus, jqXHR) {
-				var new_last_modified = jqXHR.getResponseHeader('Last-Modified');
+		var xmlhttp;
+		if (window.XMLHttpRequest) {
+			xmlhttp=new XMLHttpRequest();
+		}
+		else {
+			xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+		}
+
+        xmlhttp.onreadystatechange=function()
+        {
+			if ( xmlhttp.readyState==4 && xmlhttp.status==200 )
+			{
+				var new_last_modified = xmlhttp.getResponseHeader('Last-Modified');
 				try {
-					var new_etag = jqXHR.getResponseHeader('Etag');
+					var new_etag = xmlhttp.getResponseHeader('Etag');
 					if (new_etag === null) throw null;
 				}
 				catch (e) {
 					try {
 						// Chrome and other WebKit-based browsers do not (yet) support access to Etag
 						// so we try to find the same information in the Cache-Control field
-						new_etag = (/etag=(\S+)/.exec(jqXHR.getResponseHeader('Cache-Control')))[1];
+						new_etag = (/etag=(\S+)/.exec(xmlhttp.getResponseHeader('Cache-Control')))[1];
 					}
 					catch (e) {}
 				}
+				
+				data = jQuery.parseJSON(eval(xmlhttp.responseText));
 
 				if (new_last_modified === null) {
 					warn("Last-Modified field is not available");
@@ -69,20 +73,23 @@ function listenForUpdates() {
 				else {
 					processUpdate(data);
 				}
-				
+
 				if ((new_last_modified !== null) && (new_etag !== null)) {
 					listen(new_last_modified, new_etag);
+					return;
 				}
 				else {
 					// TODO: Should we handle the error in some other manner?
 					delayedListen(new_last_modified, new_etag);
+					return;
 				}
-			},
-			'error': function (jqXHR, textStatus, errorThrown) {
-				// TODO: Should we handle the error in some other manner?
-				delayedListen(last_modified, etag);
 			}
-		});
+        }
+
+        xmlhttp.open('GET', updates_url, true);
+		xmlhttp.setRequestHeader("If-None-Match", etag);
+		xmlhttp.setRequestHeader("If-Modified-Since", last_modified);
+        xmlhttp.send(null);
 	}
 	listen('Thu, 1 Jan 1970 00:00:00 GMT', '0');
 }
