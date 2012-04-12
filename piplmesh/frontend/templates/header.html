@@ -42,3 +42,20 @@
         </ul>
     </div>
 </div>
+
+<p>
+<a href="#" onclick="authenticate(12, 34);return false;">poslji</a>
+</p>
+{% block content %}
+    <h2>Publishers</h2>
+    <ul>
+        <li>{{ publisher }}</li>
+        <li>{{ object_list }}</li>
+        <li>{{ object }}</li>
+        <li>{{ context }}</li>
+        <li>{{ queryset }}</li>
+        {% for publisher in object_list %}
+            <li>{{ publisher.name }}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}
